@@ -34,6 +34,7 @@ def eval(env, agent, episodes, seed):
 
 
 def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barrier: Optional[mp.Barrier]):
+    logger.info("Entering train function")
     make_env = lambda: TransformReward(
         NormalizeReward(
             TransformObservation(
@@ -48,12 +49,12 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
         ), lambda reward: np.clip(reward, -10, 10)
     )
     env = gym.vector.SyncVectorEnv([make_env] * cfg.vec_envs) if cfg.vec_envs > 1 else make_env()
-
+    logger.info("Environment initialized")
     utils.set_seed_everywhere(env, seed)
 
     state_size = utils.get_space_shape(env.observation_space, is_vector_env=cfg.vec_envs > 1)
     action_size = utils.get_space_shape(env.action_space, is_vector_env=cfg.vec_envs > 1)
-
+    logger.info(f"initialize buffer and agent")
     buffer = get_buffer(cfg.buffer, state_size=state_size, action_size=action_size, device=device, seed=seed)
     agent = instantiate(cfg.agent, state_size=state_size, action_size=action_size,
                         action_space=env.action_space if cfg.vec_envs <= 1 else env.envs[0].action_space, device=device)
@@ -78,6 +79,7 @@ def train(cfg, seed: int, log_dict: dict, idx: int, logger: logging.Logger, barr
         done, truncated = np.array([False] * cfg.vec_envs), np.array([False] * cfg.vec_envs)
 
     state, _ = env.reset(seed=seed)
+    print("Ready for training")
     for step in range(cfg.vec_envs, cfg.timesteps + 1, cfg.vec_envs):
         if cfg.vec_envs > 1 and done.any():
             rewards = np.array([d['episode']['r'] for d in info['final_info'][info['_final_info']]]).squeeze(-1)

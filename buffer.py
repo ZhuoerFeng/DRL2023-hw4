@@ -43,8 +43,23 @@ class ReplayBuffer:
 
         ############################
         # YOUR IMPLEMENTATION HERE #
-
-        raise NotImplementedError
+        if self.size < self.capacity:
+            self.state[self.size] = torch.as_tensor(state)
+            self.action[self.size] = torch.as_tensor(action)
+            self.reward[self.size] = torch.as_tensor(reward) # if done != 0 else 0)
+            self.next_state[self.size] = torch.as_tensor(next_state)
+            self.done[self.size] = torch.as_tensor(done)
+            self.size += 1
+            self.idx = self.size
+        else:
+            if self.idx >= self.size:
+                self.idx -= self.size
+            self.state[self.idx] = torch.as_tensor(state)
+            self.action[self.idx] = torch.as_tensor(action)
+            self.reward[self.idx] = torch.as_tensor(reward) # if done != 0 else 0)
+            self.next_state[self.idx] = torch.as_tensor(next_state)
+            self.done[self.idx] = torch.as_tensor(done)
+            self.idx += 1
         ############################
 
     def sample(self, batch_size):
@@ -55,8 +70,15 @@ class ReplayBuffer:
         # please transfer the data to the corresponding device before return
         ############################
         # YOUR IMPLEMENTATION HERE #
+        # batch += torch.as_tensor([self.state[idx] for idx in sample_idxs]).to(self.device)
+        batch = (
+            self.state[sample_idxs].to(self.device),
+            self.action[sample_idxs].to(self.device),
+            self.reward[sample_idxs].to(self.device),
+            self.next_state[sample_idxs].to(self.device),
+            self.done[sample_idxs].to(self.device),
+        )
 
-        raise NotImplementedError
         ############################
         return batch
 
@@ -133,8 +155,13 @@ class PPOReplayBuffer(ReplayBuffer):
         # You can assume that the buffer is full, and vector envs are used.
         ############################
         # YOUR IMPLEMENTATION HERE #
-
-        raise NotImplementedError
+        done = self.done[t]
+        next_state = self.next_state[t]
+        if t == self.capacity - 1:
+            next_values = agent.get_value(next_state)
+        else:
+            next_values = self.value[t + 1]
+        next_values = torch.as_tensor(next_values, device=done.device) * (1 - done)
         ############################
         return next_values
 
@@ -150,15 +177,16 @@ class PPOReplayBuffer(ReplayBuffer):
             # Hint: can you calculate step t's advantage using step t + 1's advantage?
             ############################
             # YOUR IMPLEMENTATION HERE #
-
-            self.advantage[t] = None
+            delta = self.reward[t] + self.gamma * next_values - self.value[t]
+            if t == self.capacity - 1:
+                self.advantage[t] = delta.detach()
+            else:
+                self.advantage[t] = ((1 - self.done[t]) * self.advantage[t + 1] * self.gamma * self.gae_lambda + delta).detach()
             ############################
         # calculate the returns
         ############################
         # YOUR IMPLEMENTATION HERE #
-
-        self.returns = None
-        raise NotImplementedError
+        self.returns = self.value + self.advantage
         ############################
 
 

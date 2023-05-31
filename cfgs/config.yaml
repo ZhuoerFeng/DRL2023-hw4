@@ -40,4 +40,4 @@ hydra:
   job:
     chdir: true
   run:
-    dir: ./runs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${hydra.job.override_dirname}
+    dir: /data/fze/runs/rlhf/drl/runs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${hydra.job.override_dirname}

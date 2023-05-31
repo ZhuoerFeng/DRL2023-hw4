@@ -5,7 +5,7 @@ gamma: 0.99
 tau: 0.005
 lr: 3.0e-4
 clip_range: 0.2
-value_clip_range: null
+value_clip_range: 0.05
 value_coef: 1
 entropy_coef: 0.01
 update_epochs: 10

@@ -85,8 +85,8 @@ class PPOAgent(DDPGAgent):
         """
         ############################
         # YOUR IMPLEMENTATION HERE #
-
-        raise NotImplementedError
+        log_prob, entropy = self.actor_net.evaluate_actions(state, action)
+        return log_prob, entropy, self.value_net(state)
         ############################
     
     def get_clipped_surrogate_loss(self, log_prob, old_log_prob, advantage) -> torch.Tensor:
@@ -95,8 +95,12 @@ class PPOAgent(DDPGAgent):
         """
         ############################
         # YOUR IMPLEMENTATION HERE #
-
-        raise NotImplementedError
+        log_ratio = log_prob - old_log_prob
+        ratio = torch.exp(log_ratio)
+        pg_loss1 = advantage * ratio
+        pg_loss2 = advantage * torch.clamp(ratio, 1 - self.clip_range, 1 + self.clip_range)
+        pg_loss = - torch.mean(torch.min(pg_loss1, pg_loss2))
+        return pg_loss
         ############################
 
     def get_value_loss(self, value, old_value, returns) -> torch.Tensor:
@@ -107,8 +111,17 @@ class PPOAgent(DDPGAgent):
         # Otherwise, use MSE loss
         ############################
         # YOUR IMPLEMENTATION HERE #
-
-        raise NotImplementedError
+        if self.value_clip_range is not None:
+            value_clipped = torch.clamp(
+                value, 
+                old_value - self.value_clip_range, 
+                old_value + self.value_clip_range)
+        else:
+            value_clipped = value
+        vf_loss1 = (value - returns) ** 2
+        vf_loss2 = (value_clipped - returns) ** 2
+        vf_loss = torch.min(vf_loss1, vf_loss2)
+        return torch.mean(vf_loss)
         ############################
 
     def get_entropy_loss(self, entropy) -> torch.Tensor:
@@ -117,8 +130,7 @@ class PPOAgent(DDPGAgent):
         """
         ############################
         # YOUR IMPLEMENTATION HERE #
-
-        raise NotImplementedError
+        return -torch.mean(entropy)
         ############################
 
     def update_step(self, batch):

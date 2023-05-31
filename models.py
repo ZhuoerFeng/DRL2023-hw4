@@ -67,8 +67,12 @@ class PPOActor(Actor):
         """
         ############################
         # YOUR IMPLEMENTATION HERE #
-
-        raise NotImplementedError
+        mean = self.fcs(state)
+        std = self.log_std.exp().expand_as(mean)
+        dist = Normal(mean, std)
+        log_prob = dist.log_prob(action)
+        entropy = -torch.sum(log_prob.exp() * log_prob, dim=-1)
+        log_prob = torch.sum(log_prob, dim=-1)
         ############################
         return log_prob, entropy
 
